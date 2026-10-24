@@ -1,0 +1,794 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Arquitetura da VR Concept</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,500;0,600;1,500&family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600&family=DM+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: grafite com o dourado só nos fios e no que está aceso. Uma peça forte, o mapa em camadas com os fios entre os blocos; o resto é leitura calma em coluna. */
+:root{
+  --bg:#161616; --surface:#202020; --raise:#282828; --line:#363532; --wire:#45433F;
+  --fg:#EEEAE2; --muted:#A39E94; --faint:#77736B;
+  --gold:#E7B84E; --gold-soft:#352D1B; --gold-ink:#E7B84E;
+  --ok:#8EC5A0; --ok-soft:#1D3127; --idea:#AAB9DA; --idea-soft:#232A39; --open:#E3A08C; --open-soft:#3A2520;
+  --display:"Cormorant Garamond","Iowan Old Style",Georgia,serif;
+  --text:"DM Sans",-apple-system,"Segoe UI",Helvetica,Arial,sans-serif;
+  --mono:"DM Mono",ui-monospace,"SF Mono",Menlo,Consolas,monospace;
+  --r:12px; color-scheme:dark;
+}
+@media (prefers-color-scheme: light){ :root:not([data-theme="dark"]){
+  --bg:#F3F2EE; --surface:#FFFFFF; --raise:#F8F7F3; --line:#DDD9CF; --wire:#CFCAC0;
+  --fg:#222222; --muted:#65615A; --faint:#8E897F;
+  --gold:#C99A2E; --gold-soft:#F4E9CC; --gold-ink:#8A661B;
+  --ok:#2C6A45; --ok-soft:#E1EFE6; --idea:#3E5A8A; --idea-soft:#E4EAF5; --open:#A44A33; --open-soft:#F6E5DF;
+  color-scheme:light; }}
+:root[data-theme="light"]{
+  --bg:#F3F2EE; --surface:#FFFFFF; --raise:#F8F7F3; --line:#DDD9CF; --wire:#CFCAC0;
+  --fg:#222222; --muted:#65615A; --faint:#8E897F;
+  --gold:#C99A2E; --gold-soft:#F4E9CC; --gold-ink:#8A661B;
+  --ok:#2C6A45; --ok-soft:#E1EFE6; --idea:#3E5A8A; --idea-soft:#E4EAF5; --open:#A44A33; --open-soft:#F6E5DF;
+  color-scheme:light; }
+*{box-sizing:border-box}
+html{scroll-behavior:smooth; scroll-padding-top:70px}
+@media (prefers-reduced-motion: reduce){ html{scroll-behavior:auto} *,*::before{transition:none!important; animation:none!important} }
+body{background:var(--bg); color:var(--fg); font-family:var(--text); font-size:16px; line-height:1.6; -webkit-font-smoothing:antialiased}
+body::before{content:""; position:fixed; inset:0 0 auto; height:env(safe-area-inset-top,0px); z-index:30; background:var(--bg)}
+a{color:var(--gold-ink); text-underline-offset:3px}
+button{font:inherit; color:inherit}
+:focus-visible{outline:2px solid var(--gold); outline-offset:2px; border-radius:6px}
+
+.bar{position:sticky; top:env(safe-area-inset-top,0px); z-index:20; background:color-mix(in srgb, var(--bg) 90%, transparent); backdrop-filter:blur(10px); border-bottom:1px solid var(--line)}
+.bar-in{max-width:1200px; margin:0 auto; display:flex; align-items:center; gap:22px; padding-block:10px; padding-left:max(16px, env(safe-area-inset-left,0px)); padding-right:max(16px, env(safe-area-inset-right,0px))}
+.brand{font-family:var(--display); font-weight:600; font-size:20px; white-space:nowrap; letter-spacing:.02em}
+.brand i{font-style:normal; color:var(--gold-ink)}
+.nav{display:flex; gap:2px; overflow-x:auto; scrollbar-width:none; flex:1; min-width:0}
+.nav::-webkit-scrollbar{display:none}
+.nav a{flex:none; color:var(--muted); text-decoration:none; font-size:13.5px; padding:6px 10px; border-radius:999px}
+.nav a:hover{color:var(--fg); background:var(--raise)}
+
+.wrap{max-width:1200px; margin:0 auto; padding-left:max(16px, env(safe-area-inset-left,0px)); padding-right:max(16px, env(safe-area-inset-right,0px))}
+.col{max-width:760px}
+section{padding-block:56px 12px}
+.eyebrow{font:600 12px var(--text); letter-spacing:.16em; text-transform:uppercase; color:var(--gold-ink); margin:0 0 12px}
+h1,h2,h3{font-family:var(--display); font-weight:600; text-wrap:balance; margin:0}
+h2{font-size:clamp(30px,4.2vw,44px); line-height:1.06; margin-bottom:14px}
+h3{font-size:23px; line-height:1.15}
+p{margin:0 0 14px}
+.lead{font-size:18px; color:var(--muted)}
+.muted{color:var(--muted)}
+.min{font-family:var(--mono); font-size:12px; color:var(--faint); white-space:nowrap}
+
+/* Abertura */
+.hero{padding-block:64px 40px; border-bottom:1px solid var(--line)}
+.hero h1{font-size:clamp(46px,7.4vw,92px); line-height:.96; letter-spacing:-.015em; max-width:900px}
+.hero h1 em{font-style:italic; font-weight:500; color:var(--gold-ink)}
+.hero .lead{max-width:640px; margin-top:22px}
+.layers{display:flex; flex-wrap:wrap; gap:8px; margin-top:26px}
+.layers span{font-size:14px; border:1px solid var(--line); border-radius:999px; padding:6px 14px; background:var(--surface)}
+.layers span b{font-family:var(--mono); font-weight:500; color:var(--gold-ink); margin-right:6px}
+.hero-quote{margin-top:34px; padding-left:18px; border-left:2px solid var(--gold); max-width:760px}
+.hero-quote p{font-family:var(--display); font-size:clamp(21px,2.6vw,27px); line-height:1.3; margin:0 0 8px}
+.counts{display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:1px; background:var(--line); border:1px solid var(--line); border-radius:var(--r); overflow:hidden; margin-top:36px; max-width:760px}
+.counts div{background:var(--surface); padding:16px 18px}
+.counts b{display:block; font-family:var(--display); font-size:36px; line-height:1; font-weight:600; font-variant-numeric:tabular-nums}
+.counts span{font-size:13.5px; color:var(--muted)}
+@media (max-width:560px){ .counts{grid-template-columns:repeat(2,minmax(0,1fr))} }
+
+/* O mapa */
+.mapbar{display:flex; flex-wrap:wrap; align-items:center; gap:12px 18px; margin:22px 0 14px}
+.seg{display:inline-flex; border:1px solid var(--line); border-radius:999px; padding:3px; background:var(--surface)}
+.seg button{border:0; background:transparent; border-radius:999px; padding:7px 16px; font-size:14px; font-weight:600; color:var(--muted); cursor:pointer}
+.seg button[aria-pressed="true"]{background:var(--fg); color:var(--bg)}
+.seg.small button{padding:5px 12px; font-size:13px}
+.plabel{font-size:13px; color:var(--muted)}
+.jbar{display:flex; align-items:center; gap:10px; margin:0 0 14px; flex-wrap:wrap}
+.jbtn{border:1px solid var(--line); background:var(--surface); border-radius:999px; padding:7px 14px; font-size:14px; font-weight:600; cursor:pointer}
+.jbtn:disabled{opacity:.4; cursor:default}
+.jdots{display:flex; gap:6px; flex:1; min-width:0}
+.jdots button{flex:1; min-width:0; height:30px; border:1px solid var(--line); background:var(--surface); border-radius:8px; font:500 12px var(--mono); color:var(--muted); cursor:pointer}
+.jdots button[aria-current="step"]{background:var(--gold-soft); border-color:var(--gold); color:var(--gold-ink)}
+.jdots button.past{color:var(--fg)}
+
+[hidden]{display:none!important}
+.jtext{display:none; margin:0 0 14px; padding:12px 14px; border:1px solid var(--gold); background:var(--gold-soft); border-radius:12px; font-size:15px}
+.jtext b{display:block; font-family:var(--display); font-size:20px; font-weight:600}
+@media (max-width:960px){ .jtext{display:block} }
+.mapgrid{display:grid; grid-template-columns:minmax(0,1fr) 360px; gap:20px; align-items:start}
+@media (max-width:960px){ .mapgrid{grid-template-columns:minmax(0,1fr)} }
+.map{position:relative; border:1px solid var(--line); border-radius:16px; background:
+  radial-gradient(circle at 1px 1px, color-mix(in srgb, var(--fg) 7%, transparent) 1px, transparent 0) 0 0/22px 22px, var(--surface);
+  padding:14px 16px 16px}
+.wires{position:absolute; inset:0; width:100%; height:100%; pointer-events:none; z-index:0; overflow:visible}
+.wire{fill:none; stroke:var(--wire); stroke-width:1.4; transition:stroke .25s, opacity .25s, stroke-width .25s}
+.wire.dash{stroke-dasharray:4 5}
+.wire.on{stroke:var(--gold); stroke-width:2.2}
+.map.focus .wire:not(.on){opacity:.25}
+.row{position:relative; z-index:1; display:grid; grid-template-columns:132px minmax(0,1fr); gap:14px; align-items:center; padding-block:16px; border-top:1px dashed color-mix(in srgb, var(--line) 80%, transparent)}
+.row:first-of-type{border-top:0}
+.rl b{display:block; font:600 11.5px var(--text); letter-spacing:.14em; text-transform:uppercase; color:var(--gold-ink)}
+.rl span{display:block; font-size:12.5px; color:var(--faint); line-height:1.35; margin-top:2px}
+.rn{display:flex; flex-wrap:wrap; gap:12px 14px; justify-content:center}
+@media (max-width:640px){ .row{grid-template-columns:minmax(0,1fr); gap:8px} .rl{display:flex; gap:8px; align-items:baseline} .rl span{margin:0} .wires{display:none} }
+.node{position:relative; z-index:1; text-align:left; background:var(--raise); border:1px solid var(--line); border-radius:12px; padding:10px 13px 11px; cursor:pointer; min-width:150px; max-width:240px; flex:0 1 auto; transition:border-color .2s, opacity .25s, background .2s, transform .2s}
+.node:hover{border-color:color-mix(in srgb, var(--gold) 60%, var(--line))}
+.node b{display:block; font-family:var(--display); font-size:19px; font-weight:600; line-height:1.15}
+.node small{display:block; font-size:12.5px; color:var(--muted); line-height:1.35; margin-top:3px}
+.node .tag{display:inline-block; margin-top:7px; font:500 11.5px var(--mono); color:var(--gold-ink)}
+.node.big{min-width:230px; max-width:300px; padding:13px 16px 14px}
+.node.big b{font-size:24px}
+.doors{display:flex; gap:5px; margin-top:8px; flex-wrap:wrap}
+.doors i{font-style:normal; font-size:11.5px; border:1px solid var(--line); border-radius:999px; padding:1px 8px; color:var(--muted)}
+.doors i.lit{border-color:var(--gold); color:var(--gold-ink); background:var(--gold-soft)}
+.node.second{border-style:dashed}
+.node.sel{border-color:var(--gold); background:var(--gold-soft); box-shadow:0 0 0 3px color-mix(in srgb, var(--gold) 18%, transparent)}
+.node.lit{border-color:var(--gold)}
+.map.focus .node:not(.sel):not(.lit){opacity:.38}
+.found{position:relative; z-index:1; margin-top:6px; padding-top:14px; border-top:1px solid var(--line)}
+.found .node{max-width:none; width:100%; display:flex; flex-wrap:wrap; align-items:baseline; gap:4px 14px}
+.found .node small{margin:0}
+
+.panel{position:sticky; top:76px; border:1px solid var(--line); border-radius:16px; background:var(--surface); padding:20px 20px 18px; max-height:calc(100vh - 96px); overflow:auto}
+.panel .pk{font:600 11.5px var(--text); letter-spacing:.14em; text-transform:uppercase; color:var(--gold-ink)}
+.panel h3{font-size:28px; margin:6px 0 10px}
+.panel dl{margin:12px 0 0; display:grid; gap:10px}
+.panel dt{font-size:12px; letter-spacing:.08em; text-transform:uppercase; color:var(--faint); font-weight:600}
+.panel dd{margin:2px 0 0; font-size:15px}
+.panel ul{margin:4px 0 0; padding-left:18px}
+.panel li{margin:2px 0}
+.panel blockquote{margin:14px 0 0; padding:12px 14px; background:var(--raise); border-radius:10px; border-left:2px solid var(--gold); font-family:var(--display); font-size:18px; line-height:1.35}
+.panel blockquote cite{display:block; font:500 12px var(--mono); color:var(--faint); margin-top:6px; font-style:normal}
+.panel .close{display:none}
+.legend{display:flex; flex-wrap:wrap; gap:8px; margin-top:14px}
+@media (max-width:960px){
+  .panel{position:static; max-height:none}
+  .panel.sheet{position:fixed; left:0; right:0; bottom:0; top:auto; z-index:40; border-radius:18px 18px 0 0; max-height:72vh; overflow:auto; box-shadow:0 -18px 40px rgba(0,0,0,.35); padding-bottom:max(18px, env(safe-area-inset-bottom,0px)); padding-left:max(20px, env(safe-area-inset-left,0px)); padding-right:max(20px, env(safe-area-inset-right,0px))}
+  .panel.sheet .close{display:inline-block; float:right; border:1px solid var(--line); background:var(--raise); border-radius:999px; padding:4px 12px; font-size:13px; cursor:pointer}
+}
+
+.st{display:inline-block; font:600 11.5px var(--text); border-radius:999px; padding:2px 9px; white-space:nowrap}
+.st.ok{background:var(--ok-soft); color:var(--ok)}
+.st.idea{background:var(--idea-soft); color:var(--idea)}
+.st.open{background:var(--open-soft); color:var(--open)}
+
+/* A imersão */
+.imm{display:grid; grid-template-columns:repeat(5,minmax(0,1fr)); gap:0; margin-top:22px; border:1px solid var(--line); border-radius:16px; overflow:hidden; background:var(--surface)}
+.imm div{padding:18px 16px 18px; border-left:1px solid var(--line); min-width:0}
+.imm div:first-child{border-left:0}
+.imm .when{font:500 12px var(--mono); color:var(--gold-ink)}
+.imm h3{font-size:22px; margin:6px 0 6px}
+.imm p{font-size:14.5px; color:var(--muted); margin:0}
+.imm .core{background:var(--gold-soft)}
+@media (max-width:860px){ .imm{grid-template-columns:minmax(0,1fr)} .imm div{border-left:0; border-top:1px solid var(--line)} .imm div:first-child{border-top:0} }
+.facts{display:flex; flex-wrap:wrap; gap:10px 28px; margin-top:18px; font-size:15px}
+.facts b{font-family:var(--display); font-size:24px; font-weight:600; margin-right:6px; font-variant-numeric:tabular-nums}
+
+/* Decisões */
+.filters{display:flex; flex-wrap:wrap; gap:8px; margin:18px 0 10px}
+.chip{border:1px solid var(--line); background:var(--surface); border-radius:999px; padding:6px 13px; font-size:13.5px; cursor:pointer; color:var(--muted)}
+.chip[aria-pressed="true"]{border-color:var(--gold); color:var(--fg); background:var(--gold-soft)}
+.count{font-size:14px; color:var(--muted); margin:6px 0 12px}
+.dlist{list-style:none; margin:0; padding:0; border:1px solid var(--line); border-radius:var(--r); overflow:hidden; background:var(--surface)}
+.dlist li{display:grid; grid-template-columns:44px minmax(0,1fr) auto; gap:4px 14px; padding:14px 16px; border-top:1px solid var(--line); align-items:baseline}
+.dlist li:first-child{border-top:0}
+.dlist .n{font:500 13px var(--mono); color:var(--faint); font-variant-numeric:tabular-nums}
+.dlist h4{margin:0; font-size:16px; font-weight:600; line-height:1.4}
+.dlist q{display:block; margin-top:4px; color:var(--muted); font-family:var(--display); font-size:17px; line-height:1.35; quotes:"\201C" "\201D"}
+.dlist .who{grid-column:2; font:500 12px var(--mono); color:var(--faint)}
+.dlist .st{grid-column:3; grid-row:1}
+@media (max-width:560px){ .dlist li{grid-template-columns:minmax(0,1fr)} .dlist .n{display:none} .dlist .who,.dlist .st{grid-column:1; grid-row:auto; justify-self:start} }
+
+/* Comparação */
+.cmp{overflow-x:auto; border:1px solid var(--line); border-radius:var(--r); margin-top:18px}
+.cmp table{border-collapse:collapse; width:100%; min-width:640px; background:var(--surface); font-size:15px}
+.cmp th,.cmp td{padding:13px 16px; text-align:left; vertical-align:top; border-top:1px solid var(--line)}
+.cmp thead th{border-top:0; font:600 12px var(--text); letter-spacing:.1em; text-transform:uppercase; color:var(--faint); background:var(--raise)}
+.cmp td:first-child{color:var(--muted)}
+.cmp td.arrow{color:var(--gold-ink); font-family:var(--mono); width:24px; padding-inline:0; text-align:center}
+
+/* Diagnóstico */
+.diag{display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:14px; margin-top:20px}
+.diag div{border-top:2px solid var(--line); padding-top:12px}
+.diag h3{font-family:var(--text); font-size:16.5px; font-weight:600; margin-bottom:6px}
+.diag q{display:block; font-family:var(--display); font-size:19px; line-height:1.35; quotes:"\201C" "\201D"}
+.diag .min{display:block; margin-top:6px}
+@media (max-width:680px){ .diag{grid-template-columns:minmax(0,1fr)} }
+
+/* Contas */
+.calc{display:grid; grid-template-columns:minmax(0,1.3fr) minmax(0,1fr); gap:20px; margin-top:20px; align-items:start}
+@media (max-width:860px){ .calc{grid-template-columns:minmax(0,1fr)} }
+.crows{border:1px solid var(--line); border-radius:var(--r); background:var(--surface); overflow:hidden}
+.crow{display:grid; grid-template-columns:minmax(0,1fr) auto; gap:10px 16px; padding:14px 16px; border-top:1px solid var(--line); align-items:center}
+.crow:first-child{border-top:0}
+.crow h4{margin:0; font-size:15.5px; font-weight:600}
+.crow p{margin:2px 0 0; font-size:13px; color:var(--faint)}
+.ins{display:flex; flex-wrap:wrap; gap:8px; justify-content:flex-end}
+.num{display:inline-flex; align-items:center; border:1px solid var(--line); border-radius:10px; overflow:hidden; background:var(--raise)}
+.num button{border:0; background:transparent; width:30px; height:32px; cursor:pointer; font-size:16px; color:var(--muted)}
+.num button:hover{color:var(--fg)}
+.num input{width:78px; border:0; background:transparent; text-align:center; font:500 14px var(--mono); color:var(--fg); font-variant-numeric:tabular-nums; -moz-appearance:textfield}
+.num input::-webkit-outer-spin-button,.num input::-webkit-inner-spin-button{-webkit-appearance:none; margin:0}
+.num label{font-size:11.5px; color:var(--faint); padding:0 8px; border-left:1px solid var(--line); align-self:stretch; display:flex; align-items:center}
+.cres{border:1px solid var(--gold); border-radius:16px; background:var(--gold-soft); padding:20px}
+.cres .k{font-size:12px; letter-spacing:.12em; text-transform:uppercase; color:var(--gold-ink); font-weight:600}
+.cres .v{font-family:var(--display); font-size:clamp(34px,4vw,46px); font-weight:600; line-height:1.05; font-variant-numeric:tabular-nums; margin:2px 0 14px}
+.cres .line{display:flex; justify-content:space-between; gap:12px; font-size:14.5px; padding:6px 0; border-top:1px solid color-mix(in srgb, var(--gold) 30%, transparent)}
+.cres .line span:last-child{font-family:var(--mono); font-variant-numeric:tabular-nums}
+.cres small{display:block; margin-top:12px; font-size:13px; color:var(--muted)}
+.reset{margin-top:12px; border:1px solid var(--line); background:var(--surface); border-radius:999px; padding:6px 14px; font-size:13px; cursor:pointer}
+
+/* Ideias, ordem, aberto */
+.ideas{display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:12px; margin-top:20px}
+.ideas div{background:var(--surface); border:1px solid var(--line); border-radius:var(--r); padding:14px 16px; min-width:0}
+.ideas h3{font-family:var(--text); font-size:15.5px; font-weight:600; margin-bottom:4px}
+.ideas p{font-size:14px; color:var(--muted); margin:0}
+@media (max-width:960px){ .ideas{grid-template-columns:repeat(2,minmax(0,1fr))} }
+@media (max-width:520px){ .ideas{grid-template-columns:minmax(0,1fr)} }
+.order{list-style:none; margin:20px 0 0; padding:0; counter-reset:o; display:grid; gap:10px}
+.order li{counter-increment:o; display:grid; grid-template-columns:48px minmax(0,1fr); gap:14px; align-items:baseline; padding:14px 16px; background:var(--surface); border:1px solid var(--line); border-radius:var(--r)}
+.order li::before{content:counter(o); font-family:var(--display); font-size:30px; font-weight:600; color:var(--gold-ink); line-height:1}
+.order h3{font-family:var(--text); font-size:16px; font-weight:600}
+.order p{margin:2px 0 0; font-size:14.5px; color:var(--muted)}
+.owners{display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:14px; margin-top:22px}
+.owners div{border:1px solid var(--line); border-radius:var(--r); padding:16px 18px; background:var(--surface)}
+.owners h3{font-size:22px; margin-bottom:8px}
+.owners ul{margin:0; padding-left:18px; font-size:15px}
+.owners li{margin:4px 0}
+@media (max-width:680px){ .owners{grid-template-columns:minmax(0,1fr)} }
+.openl{margin:18px 0 0; padding-left:22px; font-size:15.5px}
+.openl li{margin:8px 0; padding-left:4px}
+.openl li::marker{font-family:var(--mono); color:var(--open)}
+.foot{margin-top:64px; padding-block:24px 56px; border-top:1px solid var(--line); font-size:14px; color:var(--muted)}
+</style>
+</head>
+<body>
+
+<header class="bar">
+  <div class="bar-in">
+    <div class="brand">VR <i>Concept</i></div>
+    <nav class="nav" aria-label="Seções">
+      <a href="#mapa-sec">O mapa</a>
+      <a href="#imersao">A imersão</a>
+      <a href="#decisoes">As decisões</a>
+      <a href="#mudou">O que mudou</a>
+      <a href="#diagnostico">O diagnóstico</a>
+      <a href="#contas">As contas</a>
+      <a href="#ideias">Ideias</a>
+      <a href="#ordem">A ordem</a>
+      <a href="#aberto">Em aberto</a>
+    </nav>
+  </div>
+</header>
+
+<div class="wrap">
+  <div class="hero">
+    <p class="eyebrow">Reunião de 23/10/2026 · Dra. Gabriela e João</p>
+    <h1>A arquitetura da <em>VR Concept</em>.</h1>
+    <p class="lead">O que decidimos sobre os produtos, a esteira e a mecânica da empresa. A VR Academy é a porta; cada produto leva ao próximo; e a venda é para a própria base, perto do aluno.</p>
+    <div class="layers" aria-label="As quatro camadas">
+      <span><b>1</b>Educação</span><span><b>2</b>Presencial</span><span><b>3</b>Continuidade</span><span><b>4</b>Recorrência</span>
+    </div>
+    <div class="hero-quote">
+      <p>"Educação, Academy; plataforma e recorrência, Attlas; programa. E o presencial: a imersão mesmo, que tem um contato maior, e o evento."</p>
+      <span class="min">João, 195:25</span>
+    </div>
+    <div class="counts">
+      <div><b>30</b><span>decisões</span></div>
+      <div><b>4</b><span>camadas de produto</span></div>
+      <div><b>7</b><span>passos da jornada</span></div>
+      <div><b>10</b><span>pontos em aberto</span></div>
+    </div>
+  </div>
+
+  <section id="mapa-sec">
+    <div class="col">
+      <p class="eyebrow">O mapa</p>
+      <h2>Da atenção à recorrência, em camadas.</h2>
+      <p class="muted">Toque num bloco para ver o que é, o preço falado e a fala da reunião. Em "A jornada", o mapa acende o caminho do dentista, passo a passo.</p>
+    </div>
+    <div class="mapbar">
+      <div class="seg" role="group" aria-label="Modo do mapa">
+        <button type="button" id="m-explorar" aria-pressed="true">Explorar</button>
+        <button type="button" id="m-jornada" aria-pressed="false">A jornada</button>
+      </div>
+      <div id="persona" hidden>
+        <span class="plabel">A dor do dentista:</span>
+        <div class="seg small" role="group" aria-label="A dor do dentista">
+          <button type="button" data-p="tecnica" aria-pressed="true">Técnica</button>
+          <button type="button" data-p="gestao" aria-pressed="false">Gestão</button>
+          <button type="button" data-p="duas" aria-pressed="false">As duas</button>
+        </div>
+      </div>
+    </div>
+    <div class="jbar" id="jbar" hidden>
+      <button type="button" class="jbtn" id="j-prev" aria-label="Passo anterior">Anterior</button>
+      <div class="jdots" id="jdots"></div>
+      <button type="button" class="jbtn" id="j-next" aria-label="Próximo passo">Próximo</button>
+    </div>
+    <div class="jtext" id="jtext" hidden></div>
+    <div class="mapgrid">
+      <div class="map" id="mapa">
+        <svg class="wires" id="wires" aria-hidden="true"></svg>
+        <div class="row"><div class="rl"><b>Atenção</b><span>de onde vem o dentista</span></div>
+          <div class="rn">
+            <button type="button" class="node" id="n-insta" data-id="insta"><b>Instagram orgânico</b><small>quatro perfis, autoridade</small></button>
+            <button type="button" class="node" id="n-base" data-id="base"><b>A base de hoje</b><small>3.157 do guia e os alunos antigos</small></button>
+            <button type="button" class="node" id="n-indica" data-id="indica"><b>Indicação</b><small>pontos por indicar</small></button>
+            <button type="button" class="node second" id="n-altta" data-id="altta"><b>A base da Altta</b><small>dentistas da harmonização</small></button>
+            <button type="button" class="node second" id="n-trafego" data-id="trafego"><b>Tráfego pago</b><small>só um canal a mais</small></button>
+          </div></div>
+        <div class="row"><div class="rl"><b>Porta</b><span>por onde entra</span></div>
+          <div class="rn">
+            <button type="button" class="node" id="n-bio" data-id="bio"><b>Link da bio</b><small>leva à VR Academy</small></button>
+            <button type="button" class="node" id="n-scan" data-id="scan"><b>VR Scan</b><small>técnica ou gestão?</small><span class="tag">grátis</span></button>
+          </div></div>
+        <div class="row"><div class="rl"><b>1 · Educação</b><span>a escola e a vitrine</span></div>
+          <div class="rn">
+            <button type="button" class="node big" id="n-academy" data-id="academy"><b>VR Academy</b><small>o aplicativo do aluno, tudo rastreado</small><span class="doors"><i data-door="completo">Completo</i><i data-door="tecnica">Técnico</i><i data-door="gestao">Gestão</i></span><span class="tag">R$ 997 o completo (falado)</span></button>
+            <button type="button" class="node" id="n-comunidade" data-id="comunidade"><b>Comunidade</b><small>todo dia, dentro da Academy</small></button>
+            <button type="button" class="node" id="n-tatica" data-id="tatica"><b>Sessões táticas</b><small>ao vivo no Meet</small><span class="tag">semanal ou mensal</span></button>
+          </div></div>
+        <div class="row"><div class="rl"><b>2 · Presencial</b><span>o high ticket e o evento</span></div>
+          <div class="rn">
+            <button type="button" class="node" id="n-evento" data-id="evento"><b>Evento VR</b><small>50 a 100 pessoas</small><span class="tag">R$ 497 a 997</span></button>
+            <button type="button" class="node big" id="n-handson" data-id="handson"><b>VR Hands-On</b><small>a imersão: 3 dias e 6 meses de acompanhamento</small><span class="tag">R$ 12 mil · 15 alunos</span></button>
+          </div></div>
+        <div class="row"><div class="rl"><b>3 · Continuidade</b><span>o acompanhamento</span></div>
+          <div class="rn">
+            <button type="button" class="node" id="n-programa" data-id="programa"><b>Programa mensal</b><small>acompanhamento e o Attlas</small><span class="tag">R$ 3 mil por mês</span></button>
+            <button type="button" class="node second" id="n-mentoria" data-id="mentoria"><b>Mentoria e consultoria</b><small>o próximo degrau</small><span class="tag">R$ 10 a 20 mil</span></button>
+          </div></div>
+        <div class="row"><div class="rl"><b>4 · Recorrência</b><span>o sistema da clínica</span></div>
+          <div class="rn">
+            <button type="button" class="node big" id="n-attlas" data-id="attlas"><b>Attlas Odonto</b><small>a clínica paga todo mês</small><span class="tag">a meta: 100 clínicas</span></button>
+          </div></div>
+        <div class="found">
+          <button type="button" class="node" id="n-os" data-id="os"><b>Por baixo de tudo: o OS da VR</b><small>o CRM e os dados de cada aluno · a IA que nutre pelo número comercial · a venda por call · a base por estado</small></button>
+        </div>
+      </div>
+      <aside class="panel" id="painel" aria-live="polite"></aside>
+    </div>
+  </section>
+
+  <section id="imersao">
+    <div class="col">
+      <p class="eyebrow">O VR Hands-On por dentro</p>
+      <h2>A imersão deixa de ser um curso e vira um programa.</h2>
+      <p class="muted">O aluno estuda antes, vive os três dias e é acompanhado por seis meses. É vendida só para a base, por call, com lista de espera.</p>
+    </div>
+    <div class="imm">
+      <div><span class="when">Antes</span><h3>Estuda na Academy</h3><p>A VR Academy completa vem junto. No presencial ele tira dúvida e refina a técnica.</p></div>
+      <div class="core"><span class="when">Dia 1</span><h3>A teoria</h3><p>Uma tarde com o Dr. Vinícius e uma tarde com a Dra. Gabriela. O João pode dar uma aula de comercial.</p></div>
+      <div class="core"><span class="when">Dia 2</span><h3>Prática</h3><p>A técnica na mão, com o Vinícius.</p></div>
+      <div class="core"><span class="when">Dia 3</span><h3>Prática</h3><p>O segundo dia de prática.</p></div>
+      <div><span class="when">6 meses</span><h3>Acompanhamento</h3><p>O resultado depois do curso, que vira o case e a placa de faturamento.</p></div>
+    </div>
+    <div class="facts">
+      <span><b>R$ 12 mil</b>o preço falado</span>
+      <span><b>15</b>alunos por turma</span>
+      <span><b>Fevereiro</b>a próxima, em São Paulo</span>
+      <span><b>Novembro</b>cancelado</span>
+    </div>
+    <p class="muted" style="margin-top:16px; max-width:760px">A conta do João: 15 alunos a R$ 12 mil dão R$ 180 mil por turma, e o aluguel de três dias custa uns R$ 3 mil, que um aluno paga. O argumento de venda é o retorno: <q>mostrando que a pessoa vai investir 12.000 e vai voltar 100</q> <span class="min">171:57</span></p>
+  </section>
+
+  <section id="decisoes">
+    <div class="col">
+      <p class="eyebrow">As decisões</p>
+      <h2>Tudo o que ficou combinado, com a fala de cada um.</h2>
+    </div>
+    <div class="filters" id="f-status" role="group" aria-label="Filtrar pelo selo">
+      <button type="button" class="chip" data-s="ok" aria-pressed="true">Decididas</button>
+      <button type="button" class="chip" data-s="idea" aria-pressed="false">Ideias</button>
+      <button type="button" class="chip" data-s="open" aria-pressed="false">Em aberto</button>
+    </div>
+    <div class="filters" id="f-tema" role="group" aria-label="Filtrar pelo tema"></div>
+    <p class="count" id="d-count" aria-live="polite"></p>
+    <ol class="dlist" id="d-list"></ol>
+  </section>
+
+  <section id="mudou">
+    <div class="col">
+      <p class="eyebrow">O que mudou desde 16/10</p>
+      <h2>A escada virou um ecossistema em camadas.</h2>
+      <p class="muted">Em 16/10 a estrutura foi aprovada como uma escada de cinco degraus. Nesta reunião ela ganhou forma de venda, preço e mecânica.</p>
+    </div>
+    <div class="cmp">
+      <table>
+        <thead><tr><th>Em 16/10</th><th></th><th>Em 23/10</th><th>O que é</th></tr></thead>
+        <tbody>
+          <tr><td>A escada de cinco degraus: VR Scan, VR Academy, Attlas Odonto, VR Hands-On e VR Journey, VR Circle</td><td class="arrow">→</td><td>Quatro camadas (educação, presencial, continuidade, recorrência), com a VR Academy como porta</td><td><span class="st idea">ajustado</span></td></tr>
+          <tr><td>Cursos vendidos sozinhos e o acesso a tudo por ano, a R$ 1.497 a 1.997</td><td class="arrow">→</td><td>O foco no completo (R$ 997 falado), com três formas de comprar</td><td><span class="st idea">ajustado</span></td></tr>
+          <tr><td>O VR Hands-On a R$ 4 a 6 mil</td><td class="arrow">→</td><td>A imersão a uns R$ 12 mil, com a Academy completa e 6 meses de acompanhamento, só para a base, por call</td><td><span class="st idea">ajustado</span></td></tr>
+          <tr><td>A VR Journey (consultoria, R$ 15 a 30 mil) e o VR Circle (mentoria, R$ 1.500 a 3.000 por mês)</td><td class="arrow">→</td><td>Um programa só, por enquanto, de uns R$ 3 mil por mês com o Attlas; a mentoria maior fica como ideia</td><td><span class="st idea">ajustado</span></td></tr>
+          <tr><td>Sem evento</td><td class="arrow">→</td><td>O Evento VR, para 50 a 100 pessoas</td><td><span class="st ok">novo</span></td></tr>
+          <tr><td>O encontro ao vivo do mês</td><td class="arrow">→</td><td>As sessões táticas: semanais no completo, mensais no técnico</td><td><span class="st ok">novo</span></td></tr>
+          <tr><td>Sem indicação</td><td class="arrow">→</td><td>A indicação com pontos trocados por benefícios</td><td><span class="st ok">novo</span></td></tr>
+          <tr><td>O presencial no modelo antigo</td><td class="arrow">→</td><td>Novembro cancelado; fevereiro em São Paulo, no modelo novo, com lista de espera</td><td><span class="st ok">novo</span></td></tr>
+          <tr><td>O VR Scan grátis, orgânico primeiro, a comunidade na Academy, a área de membros antiga sai, o Attlas é a recorrência, o Brasil primeiro, a Odontonova como prova</td><td class="arrow">=</td><td>Tudo isso continua</td><td><span class="st ok">mantido</span></td></tr>
+          <tr><td>Sem mensalidade baixa de aluno</td><td class="arrow">?</td><td>A comunidade paga sozinha foi sugerida para a base do guia</td><td><span class="st open">em tensão</span></td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section id="diagnostico">
+    <div class="col">
+      <p class="eyebrow">O diagnóstico</p>
+      <h2>Por que a estrutura antiga não segurava o aluno.</h2>
+    </div>
+    <div class="diag">
+      <div><h3>O presencial acabava em si mesmo</h3><q>A pessoa morre ali. Virou um curso 100% técnico, que não tem nenhuma estratégia de venda para levar a pessoa para uma próxima etapa.</q><span class="min">João, 149:14</span></div>
+      <div><h3>O preço jogava o doutor para baixo</h3><q>O presencial nosso tá muito barato.</q><span class="min">Gabriela, 147:52 · a última turma saiu por R$ 2.500, contra R$ 997 do online</span></div>
+      <div><h3>Faltou proximidade</h3><q>O curso não tem o rosto dele, é só o dente. Então não conecta.</q><span class="min">Gabriela, 164:59</span></div>
+      <div><h3>O aluno ficava sozinho depois da venda</h3><q>A gente entregou só o curso, não entregou mais nada. Eu sinto que faltou a gente fazer mais.</q><span class="min">Gabriela, 146:57</span></div>
+      <div><h3>A história da Odontonova nunca foi contada</h3><q>Eu nunca vi o Dr. Vinícius falando sobre a Odontonova.</q><span class="min">João, 159:57 · 7 anos, R$ 3 milhões por ano, 80% de indicação e retenção</span></div>
+      <div><h3>Formar turma ficou difícil</h3><q>Tá muito restrito e tá cada dia mais difícil formar turma.</q><span class="min">Gabriela, 153:18</span></div>
+      <div><h3>A mentalidade de marketing digital</h3><q>Você vende uma vez só.</q><span class="min">João, 182:48 · sem recorrência, a empresa para quando o mercado para</span></div>
+      <div><h3>O tráfego não trouxe o que o orgânico trouxe</h3><q>Ele cresceu mais de 6.000 seguidores no orgânico, coisa que gastando aqueles 40.000 não fez.</q><span class="min">Gabriela, 185:14</span></div>
+    </div>
+  </section>
+
+  <section id="contas">
+    <div class="col">
+      <p class="eyebrow">As contas da call</p>
+      <h2>O tamanho do que foi desenhado.</h2>
+      <p class="muted">Os números de partida são os que o João usou na reunião. São cenários para mexer, não metas. Hoje a VR fatura uns R$ 50 a 60 mil por mês.</p>
+    </div>
+    <div class="calc">
+      <div class="crows" id="crows"></div>
+      <div class="cres" aria-live="polite">
+        <div class="k">Entra todo mês, recorrente</div>
+        <div class="v" id="r-mes">R$ 0</div>
+        <div class="line"><span>Programa mensal</span><span id="r-prog">R$ 0</span></div>
+        <div class="line"><span>Attlas Odonto</span><span id="r-attlas">R$ 0</span></div>
+        <div class="line"><span>Em um ano, só o recorrente</span><span id="r-ano">R$ 0</span></div>
+        <div class="k" style="margin-top:18px">Entra por venda</div>
+        <div class="line"><span>VR Academy, no mês</span><span id="r-acad">R$ 0</span></div>
+        <div class="line"><span>Uma turma do VR Hands-On</span><span id="r-imm">R$ 0</span></div>
+        <div class="line"><span>Um Evento VR, só o ingresso</span><span id="r-evt">R$ 0</span></div>
+        <small>A conta do evento que o João fez: 100 pessoas a R$ 497 pagam o evento; se 30 fecharem o programa, são R$ 90 mil por mês.</small>
+        <button type="button" class="reset" id="c-reset">Voltar aos números da call</button>
+      </div>
+    </div>
+  </section>
+
+  <section id="ideias">
+    <div class="col">
+      <p class="eyebrow">Ideias guardadas</p>
+      <h2>O que ficou para depois.</h2>
+    </div>
+    <div class="ideas">
+      <div><h3>A câmera intraoral no Attlas</h3><p>O mapeamento 3D da Gabriela e o laudo dentro do sistema, lendo a câmera e o scanner. Um dia, a própria câmera.</p></div>
+      <div><h3>Aulas animadas e o dente em 3D</h3><p>A aula no estilo dos vídeos explicativos, e variações dos vídeos que já viralizaram.</p></div>
+      <div><h3>A simulação de casos</h3><p>Raio X e fotos de um paciente, e os alunos dando o diagnóstico na comunidade.</p></div>
+      <div><h3>Consultores da VR</h3><p>Gente treinada no Método VR para dar mentoria, como o G4 fez para crescer.</p></div>
+      <div><h3>O G4 da odontologia</h3><p>A maior do Brasil primeiro; os Estados Unidos depois.</p></div>
+      <div><h3>A VR e a Altta juntas</h3><p>A base de dentistas da harmonização como canal, e os cursos de captação da Altta na Academy.</p></div>
+      <div><h3>O jantar com a base</h3><p>Vinte doutores, cada um trazendo um colega, perto dos sócios.</p></div>
+      <div><h3>Um avatar do Dr. Vinícius</h3><p>No futuro, se ele quiser.</p></div>
+    </div>
+  </section>
+
+  <section id="ordem">
+    <div class="col">
+      <p class="eyebrow">A ordem</p>
+      <h2>O que vem primeiro.</h2>
+      <p class="muted"><q>Finalizar o VR Academy o mais rápido possível.</q> <span class="min">João, 194:33</span> · <q>Essa arquitetura dos produtos, eu acho que tem que bater o martelo nisso aí.</q> <span class="min">Gabriela, 194:52</span></p>
+    </div>
+    <ol class="order">
+      <li><div><h3>Terminar a VR Academy</h3><p>A estrutura, os cursos de gestão escritos, as planilhas dos cursos como entregáveis e o VR Scan grátis no ar.</p></div></li>
+      <li><div><h3>Bater o martelo na arquitetura</h3><p>Numa call da semana, com este material como base; depois, a estrutura, os funis e o comercial dentro do OS.</p></div></li>
+      <li><div><h3>Migrar a base</h3><p>Os alunos da plataforma antiga e os 3.157 do guia, com o estado obrigatório e só o Brasil.</p></div></li>
+      <li><div><h3>Começar a vender o programa mensal</h3><p>Desenhado a partir do programa da Altta, que o João manda como modelo.</p></div></li>
+      <li><div><h3>O VR Hands-On de fevereiro, em São Paulo</h3><p>A lista de espera, a base nutrida pela IA e a venda por call.</p></div></li>
+      <li><div><h3>O Evento VR e os quatro Instagrams</h3><p>O evento para o ano que vem; o conteúdo de autoridade começa já, em paralelo.</p></div></li>
+    </ol>
+    <div class="owners">
+      <div><h3>O João</h3><ul>
+        <li>Terminar a VR Academy</li>
+        <li>Migrar os alunos antigos e a base do guia</li>
+        <li>Separar a base por estado</li>
+        <li>Montar no OS a arquitetura, os funis e o comercial</li>
+        <li>Ligar o Claude da Gabriela ao OS da VR</li>
+        <li>Liberar o Attlas Odonto para o teste dela (semana de 26/10)</li>
+        <li>Mandar a estrutura do programa da Altta e a apresentação do programa de R$ 12 mil</li>
+        <li>Confirmar as taxas da HyperCash</li>
+        <li>Marcar a call da semana</li>
+      </ul></div>
+      <div><h3>A Gabriela</h3><ul>
+        <li>Deixar prontos os cursos de gestão e as planilhas dos cursos</li>
+        <li>Lançar o VR Scan</li>
+        <li>Definir a data da imersão de fevereiro</li>
+        <li>Começar a vender o programa mensal</li>
+        <li>Pensar a comunidade: os casos do Vinícius e as simulações</li>
+      </ul></div>
+    </div>
+  </section>
+
+  <section id="aberto">
+    <div class="col">
+      <p class="eyebrow">Em aberto</p>
+      <h2>O que ainda falta decidir.</h2>
+    </div>
+    <ol class="openl col">
+      <li>O preço do completo (R$ 997?) e o de só um lado (no mínimo R$ 697?).</li>
+      <li>O nome do programa mensal ("VR alguma coisa"; a hipótese de 16/10 era VR Circle) e o que ele entrega.</li>
+      <li>O que exatamente entra na imersão de R$ 12 mil, e a data de fevereiro.</li>
+      <li>O nome, o formato e o preço do Evento VR (R$ 497 a 997, com o VIP).</li>
+      <li>Um presencial só de técnica e outro de gestão, ou um só.</li>
+      <li>A base do guia: grátis com 30 dias de comunidade, ou com uma oferta; e se a comunidade pode ser vendida sozinha.</li>
+      <li>O acesso dos alunos migrados: por um ano ou para sempre.</li>
+      <li>O produto de entrada barato: qual é, ou se o Guia de Polimento continua sendo ele.</li>
+      <li>O checkout: a HyperCash (a taxa a confirmar) ou a Hotmart.</li>
+      <li>O que vem primeiro para a venda: a VR Academy ou o Attlas Odonto.</li>
+    </ol>
+    <div class="foot col">
+      <p>Feito a partir da reunião de 23/10/2026 (3h38 de gravação), guardada no OS. O documento com todas as falas e os minutos é o <b>estrutura-da-vr-concept.md</b>, na pasta de estratégia da VR. Ele atualiza a estrutura aprovada em 16/10.</p>
+    </div>
+  </section>
+</div>
+
+<script>
+(function(){
+  var NODES = {
+    insta:{k:'Atenção', t:'Instagram orgânico', s:'ok', o:'Os quatro perfis: o da Gabriela, o do Vinícius, o da VR Concept e o do Attlas. Conteúdo de autoridade, contando a história da Odontonova.', d:[['Os números','O perfil do Vinícius cresceu mais de 6 mil seguidores sem tráfego; um vídeo dele passou de 1 milhão de visualizações.'],['Leva para','O link da bio e o VR Scan.']], q:'Crescer o Instagram assim, orgânico, na autoridade, porque vai ficar muito mais fácil vender esses produtos mais altos.', w:'Gabriela, 184:46'},
+    base:{k:'Atenção', t:'A base de hoje', s:'ok', o:'Os 3.157 cadastros do Guia de Polimento que estão no OS, os alunos da plataforma antiga e os ex-alunos do presencial nos grupos.', d:[['O que acontece','Todos migram para a VR Academy, com acesso ao que já compraram. O estado é obrigatório na entrada, e por enquanto só o Brasil.'],['A conta','Dos uns 1.200 do Brasil, se 10% entrarem, são 120 doutores para o Attlas e o presencial.'],['Em aberto','Grátis com 30 dias de comunidade, ou com uma oferta.']], q:'É a única galera que a gente tem realmente. A gente tem que trazer esse pessoal pra gente o mais rápido possível.', w:'João, 189:48'},
+    indica:{k:'Atenção', t:'Indicação com pontos', s:'ok', o:'Quem indica outro dentista ganha pontos e troca por benefícios.', d:[['Os benefícios','Desconto na imersão, no Attlas e no programa, e uma rede de benefícios com marcas e dentais.'],['Por que importa','Com a base indicando, o tráfego pago vira só mais um canal.']], q:'A pessoa indica, ela ganha pontos. Esses pontos ela pode trocar por benefícios.', w:'João, 165:27'},
+    altta:{k:'Atenção', t:'A base da Altta', s:'idea', o:'Uns 80% dos clientes da Altta são dentistas que fizeram harmonização facial. Muitos também fazem faceta.', d:[['A ideia','A Altta vira canal da VR, com uma palestra dos dois para essa base. No futuro, os cursos de captação da Altta dentro da VR Academy.']], q:'A gente ser canal de aquisição para a VR, e talvez vocês dois darem uma palestra ali.', w:'João, 193:27'},
+    trafego:{k:'Atenção', t:'Tráfego pago', s:'ok', o:'Continua, mas como um canal a mais. O anúncio leva para a VR Academy, nunca direto para o presencial.', d:[['Por quê','Vender R$ 12 mil numa página de anúncio não funciona. A pessoa entra pela Academy e a venda alta acontece depois, por call.']], q:'O tráfego pago vira só mais um canal de aquisição. Ele não vira necessidade fundamental.', w:'João, 166:12'},
+    bio:{k:'Porta', t:'Link da bio', s:'ok', o:'O link do Instagram leva para a VR Academy.', d:[['Leva para','A VR Academy.']], q:'Vai tá ali no link da bio, vai ser VR Academy. Pronto.', w:'Gabriela, 181:43'},
+    scan:{k:'Porta', t:'VR Scan', s:'ok', o:'O diagnóstico grátis do dentista. Capta o contato e separa quem tem dor de técnica, de gestão ou das duas.', d:[['O preço','Grátis.'],['Leva para','A porta certa da VR Academy.'],['Quando','A Gabriela quer lançar logo.']], q:'No VR Scan a gente vai conseguir entender se a pessoa é técnica ou é gestão e, de acordo com a dor dela, a gente mata ali.', w:'Gabriela, 126:10'},
+    academy:{k:'1 · Educação', t:'VR Academy', s:'ok', o:'O aplicativo do aluno: os cursos, a comunidade e as aulas ao vivo. É a porta de tudo e a vitrine dos outros produtos, com cada passo rastreado.', d:[['Três formas de comprar','O completo (R$ 997 falado), só o técnico ou só a gestão (no mínimo R$ 697, hipótese da Gabriela). A comunicação puxa o completo.'],['O conteúdo','A gestão lança com cursos escritos e exercícios, sem vídeo. A técnica tem vídeo, com o resumo e os exercícios embaixo. O curso antigo entra também.'],['Leva para','O Evento VR, o VR Hands-On e o Attlas, que o aluno ganha para experimentar (1 mês ou 14 dias, ideia).']], q:'O Academy se torna uma esteira pro Attlas.', w:'João, 145:20'},
+    comunidade:{k:'1 · Educação', t:'Comunidade', s:'ok', o:'Mora dentro da VR Academy, fora do WhatsApp, com coisa nova todo dia.', d:[['As ideias','Posts diários montados pela IA a partir dos casos do Vinícius; enquetes; simulação de paciente com raio X e fotos para os alunos diagnosticarem.'],['Para começar cheia','Os alunos migrados chegam primeiro. A base do guia pode ganhar 30 dias grátis (ideia).']], q:'Eu queria a gente conseguir implementar a comunidade dentro dela, porque o difícil de comunidade é ficar incentivando.', w:'Gabriela, 130:38'},
+    tatica:{k:'1 · Educação', t:'Sessões táticas', s:'ok', o:'Uma call de 30 a 40 minutos no Meet com os alunos, para manter a proximidade e apresentar os outros produtos.', d:[['A frequência','Quem compra o completo: toda semana, revezando duas semanas a Gabriela, uma o Vinícius, uma o João. Quem compra só o técnico: uma vez por mês.'],['Leva para','O VR Hands-On e o programa.']], q:'Vai gerar proximidade, a gente vai poder fazer pitch toda semana pra nossa galera da base.', w:'João, 164:58'},
+    evento:{k:'2 · Presencial', t:'Evento VR', s:'ok', o:'Um evento de 2 a 3 dias para 50 a 100 pessoas, com palestra, network e a história da Odontonova. Inspirado no G4 Valley.', d:[['O preço','Ingresso barato, de R$ 497 a 997, com um VIP que almoça com os doutores. O ingresso paga o evento.'],['Leva para','O programa mensal e o Attlas.'],['Em aberto','O nome, o formato e o preço.']], q:'De custo baixo para ter pitch para as coisas mais altas.', w:'Gabriela, 158:54'},
+    handson:{k:'2 · Presencial', t:'VR Hands-On', s:'ok', o:'A imersão técnica do Vinícius, que vira um programa: a VR Academy completa, os 3 dias e 6 meses de acompanhamento.', d:[['O preço','Uns R$ 12 mil (o João acha que dá até R$ 18 a 25 mil). Turma de 15.'],['Os 3 dias','O primeiro de teoria, uma tarde com o Vinícius e uma com a Gabriela; dois de prática.'],['Como vende','Só para a base, por call, com lista de espera. Fevereiro em São Paulo; novembro cancelado.']], q:'Não vamos vender para todo mundo que tá de fora, vamos vender pra nossa base.', w:'João, 167:42'},
+    programa:{k:'3 · Continuidade', t:'Programa mensal', s:'ok', o:'Um programa só, por enquanto: o acompanhamento da VR com o Attlas junto, cobrado todo mês.', d:[['O preço','Uns R$ 3 mil por mês, com um ano de acompanhamento.'],['Quando','A Gabriela já pode começar a vender.'],['Em aberto','O nome ("VR alguma coisa") e o que entrega. O João manda o programa da Altta como modelo.']], q:'Um programa só por enquanto, um programa de 3.000 mensal, que é onde vai ter o acompanhamento.', w:'João, 194:59'},
+    mentoria:{k:'3 · Continuidade', t:'Mentoria e consultoria', s:'idea', o:'O acompanhamento maior, com cada aluno seguido dentro do OS. Vendida no presencial, para quem já tem consultório.', d:[['O preço','De R$ 10 a 20 mil, ou mensal.'],['Depois','Consultores da VR treinados no Método VR, para crescer sem depender só dos sócios.']], q:'Por que não ter um produto de mentoria de 10, 15, 20.000, ou então tanto mensal?', w:'João, 150:16'},
+    attlas:{k:'4 · Recorrência', t:'Attlas Odonto', s:'ok', o:'O sistema da clínica, cobrado todo mês. É o destino da esteira: cada produto mostra o Attlas.', d:[['O que tem','59 modelos de agentes de IA prontos. Quem não monta sozinho chama o time de implantação, e o ticket sobe.'],['Os números','100 clínicas assinando é a virada. A divisão com a Altta é 50/50 (16/10).'],['Quando','A Gabriela testa na semana de 26/10.']], q:'O produto Academy precisa mostrar o Attlas da melhor maneira possível.', w:'João, 145:34'},
+    os:{k:'Por baixo de tudo', t:'OS da VR', s:'ok', o:'O escritório da VR: o CRM e os dados de cada aluno, de onde sai toda a venda para a base.', d:[['A IA','Nutre a base pelo número comercial e, quando alguém pergunta do presencial, marca a call em vez de tentar vender.'],['A venda','O high ticket se vende por call, com o retorno do investimento e a Odontonova como prova.'],['Os dados','A base separada por estado (SP, RJ, MG). O Claude da Gabriela ligado ao OS para ela ajustar página e IA.'],['O checkout','Testar a HyperCash; a taxa o João confirma.']], q:'É sete vezes mais fácil vender para uma pessoa que tá na base.', w:'João, 168:24'}
+  };
+  var EDGES = [
+    ['insta','bio'],['insta','scan'],['base','academy'],['indica','academy'],['trafego','academy',1],['altta','evento',1],
+    ['bio','academy'],['scan','academy'],
+    ['academy','evento'],['academy','handson'],['tatica','handson'],['academy','attlas',1],
+    ['evento','programa'],['handson','programa'],['handson','mentoria',1],
+    ['programa','attlas'],['mentoria','attlas',1]
+  ];
+  var STEPS = [
+    {t:'Vê o conteúdo', n:['insta','base','indica','trafego'], e:[], txt:{all:'Vê o Vinícius, a Gabriela ou a VR no Instagram, ou chega pela base, por indicação de um colega ou por um anúncio.'}},
+    {t:'Entra pela porta', n:['insta','bio','scan'], e:[['insta','bio'],['insta','scan']], txt:{all:'Clica no link da bio, ou faz o VR Scan grátis, que mostra se a dor é de técnica, de gestão ou das duas.'}},
+    {t:'Compra a VR Academy', n:['bio','scan','academy'], e:[['bio','academy'],['scan','academy']], txt:{tecnica:'Compra o técnico, ou o completo. A partir daí a VR tem o Instagram, o WhatsApp, o e-mail e o uso dele na plataforma.', gestao:'Compra a gestão, com os cursos escritos e os exercícios. A partir daí a VR tem os dados e o uso dele na plataforma.', duas:'Compra o completo, as duas metades do Método VR. A partir daí a VR tem os dados e o uso dele na plataforma.'}},
+    {t:'Fica perto', n:['academy','comunidade','tatica','os'], e:[], txt:{tecnica:'Comunidade todo dia e a sessão tática uma vez por mês. A IA nutre pelo número comercial, e ele ganha o Attlas para experimentar.', gestao:'Comunidade todo dia e as sessões táticas. A IA nutre pelo número comercial, e ele ganha o Attlas para experimentar.', duas:'Comunidade todo dia e a sessão tática toda semana, com a Gabriela, o Vinícius e o João. A IA nutre, e ele ganha o Attlas para experimentar.'}},
+    {t:'É convidado', n:{tecnica:['academy','tatica','handson','os'], gestao:['academy','evento','os'], duas:['academy','tatica','evento','handson','os']}, e:{tecnica:[['academy','handson'],['tatica','handson']], gestao:[['academy','evento']], duas:[['academy','evento'],['academy','handson'],['tatica','handson']]}, txt:{tecnica:'Entra na lista de espera do VR Hands-On. A IA marca a call, e a call vende, mostrando o retorno.', gestao:'É convidado para o Evento VR, com a palestra da Gabriela e a história da Odontonova.', duas:'É convidado para o Evento VR e para a lista de espera do VR Hands-On. A IA marca a call; a call vende.'}},
+    {t:'Vive o presencial', n:{tecnica:['handson'], gestao:['evento'], duas:['evento','handson']}, e:[], txt:{tecnica:'Estudou antes na Academy. Vive o dia de teoria com o Vinícius e a Gabriela, os dois de prática, e tem 6 meses de acompanhamento.', gestao:'Vive o evento: a história da Odontonova, a gestão da clínica e a oferta do programa e do Attlas.', duas:'Vive o evento e depois a imersão: a teoria, a prática e os 6 meses de acompanhamento.'}},
+    {t:'Continua e indica', n:['programa','attlas','indica','mentoria'], e:{tecnica:[['handson','programa'],['programa','attlas'],['handson','mentoria']], gestao:[['evento','programa'],['programa','attlas']], duas:[['evento','programa'],['handson','programa'],['programa','attlas']]}, txt:{all:'Entra no programa mensal com o Attlas Odonto, ou na mentoria. Indica colegas e ganha pontos; quando fatura, ganha a placa.'}}
+  ];
+  var STLABEL = {ok:'Decidido', idea:'Ideia', open:'Em aberto'};
+  var map = document.getElementById('mapa'), svg = document.getElementById('wires'), panel = document.getElementById('painel');
+  var mode = 'explorar', persona = 'tecnica', step = 0, sel = null;
+  var narrow = window.matchMedia('(max-width: 960px)');
+
+  function el(id){ return document.getElementById('n-' + id); }
+  function draw(){
+    var r = map.getBoundingClientRect();
+    if(!r.width) return;
+    svg.setAttribute('viewBox', '0 0 ' + r.width + ' ' + r.height);
+    svg.innerHTML = EDGES.map(function(e){
+      var A = el(e[0]).getBoundingClientRect(), B = el(e[1]).getBoundingClientRect();
+      var x1 = A.left + A.width/2 - r.left, y1 = A.bottom - r.top, x2 = B.left + B.width/2 - r.left, y2 = B.top - r.top;
+      var dy = Math.max(22, (y2 - y1) * .5);
+      return '<path class="wire' + (e[2] ? ' dash' : '') + '" data-a="' + e[0] + '" data-b="' + e[1] + '" d="M' + x1.toFixed(1) + ',' + y1.toFixed(1) + ' C' + x1.toFixed(1) + ',' + (y1+dy).toFixed(1) + ' ' + x2.toFixed(1) + ',' + (y2-dy).toFixed(1) + ' ' + x2.toFixed(1) + ',' + y2.toFixed(1) + '"/>';
+    }).join('');
+    paint();
+  }
+  function pick(v){ return Array.isArray(v) || typeof v === 'string' ? v : (v[persona] || v.all || []); }
+  function paint(){
+    var lit = [], edges = [];
+    if(mode === 'jornada'){
+      var s = STEPS[step]; lit = pick(s.n); edges = pick(s.e);
+    } else if(sel){
+      lit = [sel];
+      EDGES.forEach(function(e){ if(e[0] === sel || e[1] === sel){ edges.push([e[0], e[1]]); lit.push(e[0] === sel ? e[1] : e[0]); } });
+    }
+    map.classList.toggle('focus', lit.length > 0);
+    document.querySelectorAll('.node').forEach(function(n){
+      var id = n.dataset.id;
+      n.classList.toggle('sel', mode === 'explorar' ? id === sel : false);
+      n.classList.toggle('lit', lit.indexOf(id) > -1 && !(mode === 'explorar' && id === sel));
+    });
+    svg.querySelectorAll('.wire').forEach(function(w){
+      var on = edges.some(function(p){ return p[0] === w.dataset.a && p[1] === w.dataset.b; });
+      w.classList.toggle('on', on);
+    });
+    document.querySelectorAll('#n-academy .doors i').forEach(function(i){
+      var d = i.dataset.door, on = mode === 'jornada' && step >= 2 && ((persona === 'duas' && d === 'completo') || persona === d);
+      i.classList.toggle('lit', on);
+    });
+  }
+  function esc(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;'); }
+  function showNode(id){
+    var n = NODES[id];
+    panel.innerHTML = (narrow.matches ? '<button type="button" class="close" id="p-close">Fechar</button>' : '') +
+      '<span class="pk">' + esc(n.k) + '</span><h3>' + esc(n.t) + '</h3><span class="st ' + n.s + '">' + STLABEL[n.s] + '</span>' +
+      '<p style="margin-top:12px">' + esc(n.o) + '</p><dl>' + n.d.map(function(x){ return '<div><dt>' + esc(x[0]) + '</dt><dd>' + esc(x[1]) + '</dd></div>'; }).join('') + '</dl>' +
+      '<blockquote>"' + esc(n.q) + '"<cite>' + esc(n.w) + '</cite></blockquote>';
+    openSheet();
+  }
+  function showIntro(){
+    panel.classList.remove('sheet');
+    panel.innerHTML = '<span class="pk">Como ler</span><h3>Toque num bloco.</h3><p class="muted">Cada bloco abre o que é, o preço falado, para onde leva e a fala da reunião. Os fios dourados mostram o caminho.</p>' +
+      '<div class="legend"><span class="st ok">Decidido</span><span class="st idea">Ideia</span><span class="st open">Em aberto</span></div>' +
+      '<p class="muted" style="margin-top:14px; font-size:14px">O traço pontilhado é um caminho secundário. O OS da VR fica por baixo de todas as camadas.</p>';
+  }
+  function showStep(){
+    var s = STEPS[step], t = s.txt[persona] || s.txt.all;
+    panel.classList.remove('sheet');
+    panel.innerHTML = '<span class="pk">Passo ' + (step + 1) + ' de ' + STEPS.length + '</span><h3>' + esc(s.t) + '</h3><p>' + esc(t) + '</p>' +
+      '<p class="muted" style="font-size:14px">' + pick(s.n).map(function(id){ return esc(NODES[id].t); }).join(' · ') + '</p>';
+    document.getElementById('jtext').innerHTML = '<b>' + (step + 1) + '. ' + esc(s.t) + '</b>' + esc(t);
+    document.querySelectorAll('#jdots button').forEach(function(b, i){
+      if(i === step) b.setAttribute('aria-current', 'step'); else b.removeAttribute('aria-current');
+      b.classList.toggle('past', i < step);
+    });
+    document.getElementById('j-prev').disabled = step === 0;
+    document.getElementById('j-next').disabled = step === STEPS.length - 1;
+  }
+  function openSheet(){ if(narrow.matches){ panel.classList.add('sheet'); } }
+  panel.addEventListener('click', function(e){ if(e.target.id === 'p-close'){ panel.classList.remove('sheet'); } });
+
+  document.querySelectorAll('.node').forEach(function(n){
+    n.addEventListener('click', function(){
+      if(mode === 'jornada') setMode('explorar');
+      sel = sel === n.dataset.id && !narrow.matches ? null : n.dataset.id;
+      paint();
+      if(sel) showNode(sel); else showIntro();
+    });
+  });
+
+  var jd = document.getElementById('jdots');
+  jd.innerHTML = STEPS.map(function(s, i){ return '<button type="button" aria-label="Passo ' + (i+1) + ': ' + s.t + '">' + (i+1) + '</button>'; }).join('');
+  jd.querySelectorAll('button').forEach(function(b, i){ b.addEventListener('click', function(){ step = i; showStep(); paint(); }); });
+  document.getElementById('j-prev').addEventListener('click', function(){ if(step > 0){ step--; showStep(); paint(); } });
+  document.getElementById('j-next').addEventListener('click', function(){ if(step < STEPS.length - 1){ step++; showStep(); paint(); } });
+
+  function setMode(m){
+    mode = m;
+    document.getElementById('m-explorar').setAttribute('aria-pressed', m === 'explorar');
+    document.getElementById('m-jornada').setAttribute('aria-pressed', m === 'jornada');
+    document.getElementById('persona').hidden = m !== 'jornada';
+    document.getElementById('jbar').hidden = m !== 'jornada';
+    document.getElementById('jtext').hidden = m !== 'jornada';
+    sel = null;
+    if(m === 'jornada'){ showStep(); } else { showIntro(); }
+    paint();
+  }
+  document.getElementById('m-explorar').addEventListener('click', function(){ setMode('explorar'); });
+  document.getElementById('m-jornada').addEventListener('click', function(){ setMode('jornada'); });
+  document.querySelectorAll('#persona button').forEach(function(b){
+    b.addEventListener('click', function(){
+      persona = b.dataset.p;
+      document.querySelectorAll('#persona button').forEach(function(o){ o.setAttribute('aria-pressed', o === b); });
+      showStep(); paint();
+    });
+  });
+
+  showIntro();
+  draw();
+  if(window.ResizeObserver){ new ResizeObserver(draw).observe(map); } else { window.addEventListener('resize', draw); }
+  if(document.fonts && document.fonts.ready){ document.fonts.ready.then(draw); }
+
+  /* As decisões */
+  var TEMAS = {porta:'A porta', academy:'A VR Academy', presencial:'O presencial', continuidade:'A continuidade', attlas:'O Attlas', base:'A base', venda:'Venda e IA', crescimento:'Crescimento e prova', prioridade:'A prioridade'};
+  var D = [
+    ['porta','ok','O link da bio leva para a VR Academy','Vai tá ali no link da bio, vai ser VR Academy. Pronto.','Gabriela, 181:43'],
+    ['porta','ok','O VR Scan é grátis, para captar e separar técnica de gestão','No VR Scan a gente vai conseguir entender se a pessoa é técnica ou é gestão.','Gabriela, 126:10'],
+    ['academy','ok','A VR Academy foca no completo, com três formas de comprar: completo, técnico e gestão','Eu tentaria focar no completão.','João, 124:32; Gabriela, 161:52'],
+    ['academy','ok','A gestão lança com cursos escritos e exercícios, sem vídeo','A parte de gestão, inicialmente, não precisaria gravar vídeo e a gente já lança logo.','Gabriela, 124:16'],
+    ['academy','ok','O curso antigo entra na VR Academy','Colocar esse curso completo dentro do Academy também.','João, 144:17'],
+    ['base','ok','Os alunos da plataforma antiga migram para a VR Academy','Eu acho que seria legal a gente migrar e dar essa experiência nova, melhor.','Gabriela, 147:25'],
+    ['base','ok','A base do Guia de Polimento (3.157) vai para a Academy, com o que já comprou','Jogou essa galera toda pro Academy, só fazer a transferência, e a gente tenta criar um relacionamento com a maioria.','João, 188:24'],
+    ['base','ok','O estado e o cadastro são obrigatórios na migração','Isso é obrigatório ao migrar, preencher lá.','Gabriela, 190:22'],
+    ['base','ok','A base é separada por estado, e o foco é só o Brasil','Vamos restringir somente ao Brasil, para depois a gente pensar no resto.','João, 188:24'],
+    ['academy','ok','A comunidade mora dentro da VR Academy, com coisa nova todo dia','Eu queria a gente conseguir implementar a comunidade dentro dela.','Gabriela, 130:38'],
+    ['academy','ok','Sessões táticas: semanais no completo, revezando os três; mensais no técnico','Se ela comprou completo, aí a gente pode fazer semanal.','Gabriela, 164:37'],
+    ['presencial','ok','O presencial vira canal de aquisição, não só curso técnico','Canal de aquisição. Exatamente.','João, 151:11'],
+    ['presencial','ok','O aluno estuda o online antes do presencial','Estimular o aluno a comprar o online, começar a estudar antes e no presencial ele tirar as dúvidas, aperfeiçoar.','Gabriela, 154:03'],
+    ['presencial','ok','O presencial é vendido para a base, não para lead frio','Não vamos vender para todo mundo que tá de fora, vamos vender pra nossa base.','João, 167:42'],
+    ['presencial','ok','Novembro (SP) cancelado; a próxima turma é em fevereiro, em SP, com lista de espera','Novembro não vai ter, eu preferi cancelar.','Gabriela, 169:04'],
+    ['presencial','ok','A imersão sobe para uns R$ 12 mil, com a Academy completa e 6 meses de acompanhamento','É com VR Academy completo. Essa é a ideia para ter esse valor.','Gabriela, 175:18; João, 172:39'],
+    ['presencial','ok','Os 3 dias: um de teoria com o Vinícius e a Gabriela, dois de prática; turma de 15','O primeiro dia, uma tarde com o Vinícius, uma tarde comigo e os outros dois dias de prática.','Gabriela, 172:16'],
+    ['venda','ok','O high ticket se vende por call, com o retorno do investimento como argumento','Não tem como vender uma imersão dessa no WhatsApp.','João, 170:41'],
+    ['presencial','ok','Dois formatos presenciais: a imersão e o evento grande','Duplicaria o presencial: a imersão mesmo, que tem um contato maior, e o evento.','João, 195:47'],
+    ['continuidade','ok','Um programa de continuidade só, por enquanto, de uns R$ 3 mil por mês, com o Attlas','Um programa só por enquanto, um programa de 3.000 mensal.','João, 194:59'],
+    ['continuidade','ok','A Gabriela já pode começar a vender o programa','Esse programa aí eu acho que a gente já pode começar a vender.','Gabriela, 195:24'],
+    ['attlas','ok','O Attlas é o destino da esteira, e a Academy mostra o Attlas','O produto Academy precisa mostrar o Attlas da melhor maneira possível.','João, 145:34'],
+    ['venda','ok','O tráfego pago é só um canal a mais; o foco é vender para a base','O tráfego pago vira só mais um canal de aquisição.','João, 166:12'],
+    ['venda','ok','A IA nutre a base pelo número comercial e marca a call do presencial','Ela não vai conseguir vender esse negócio de 12.000, provavelmente. Mas talvez ela marcar uma call.','Gabriela, 182:04'],
+    ['crescimento','ok','Indicação com pontos trocados por benefícios','A pessoa indica, ela ganha pontos. Esses pontos ela pode trocar por benefícios.','João, 165:27'],
+    ['crescimento','ok','A Odontonova é a prova principal, e os doutores contam essa história','Nós criamos uma empresa de 3 milhões de faturamento anual, que tem 7 anos no mercado, que vive 80% de indicação e de retenção.','João, 155:53'],
+    ['crescimento','ok','Placas de faturamento para os alunos','Imagina a gente ter plaquinha para entregar pro nosso aluno.','João, 173:48'],
+    ['venda','ok','Os pedidos e as ideias da Gabriela saem do WhatsApp e vão pelo Claude para o OS','O WhatsApp fica tudo muito solto.','Gabriela, 130:09'],
+    ['venda','ok','O Claude da Gabriela é ligado ao OS da VR','Anota isso para virar uma tarefa, que eu quero fazer isso hoje.','João, 127:46'],
+    ['prioridade','ok','A prioridade é terminar a VR Academy e bater o martelo na arquitetura','Essa arquitetura dos produtos, eu acho que tem que bater o martelo nisso aí.','Gabriela, 194:52'],
+    ['porta','idea','Um produto de entrada barato e atrativo que leva para a Academy','Fazer um funil em um produto que é muito atrativo. Low ticket só.','João, 125:31'],
+    ['academy','idea','Posts diários da comunidade a partir do banco de casos do Vinícius','Imagina o Dr. Vinícius criar um banco de imagens de casos dele e a IA conseguir puxar esse banco.','João, 131:19'],
+    ['academy','idea','Simulação de paciente para os alunos diagnosticarem','Vai chegar o paciente tal, mandar raio X, mandar fotos e as pessoas irem: eu faria tal diagnóstico.','Gabriela, 131:53'],
+    ['attlas','idea','Quem compra a Academy ganha o Attlas para experimentar','Um mês de Attlas grátis, sei lá, 14 dias grátis.','João, 145:55'],
+    ['continuidade','idea','A mentoria ou consultoria maior, de R$ 10 a 20 mil','Por que não ter um produto de mentoria de 10, 15, 20.000, ou então tanto mensal?','João, 150:16'],
+    ['continuidade','idea','Consultores da VR treinados no método','Você treina ele, ele vai ser um consultor da VR Concept.','João, 196:42'],
+    ['presencial','idea','O ingresso VIP do evento, com almoço com os doutores','Bota o ingresso VIP, que a pessoa vai ter um almoço com vocês.','João, 159:27'],
+    ['presencial','idea','Um presencial de técnica e outro de gestão','Um focado somente em gestão, um focado somente na técnica. São públicos totalmente diferentes.','João, 151:47'],
+    ['presencial','idea','O João dá uma aula de comercial na imersão','Eu vou também para dar talvez uma aula de comercial.','João, 172:39'],
+    ['crescimento','idea','O café ou o jantar com 20 doutores da base','Por que não pegar essa galera e botar vocês dois para tomar um café em algum lugar?','João, 191:08'],
+    ['crescimento','idea','A Altta como canal, com uma palestra dos dois','A gente ser canal de aquisição para a VR, e talvez vocês dois darem uma palestra ali.','João, 193:27'],
+    ['base','idea','30 dias de comunidade grátis para a base do guia','Dá para eles a comunidade 30 dias gratuito.','Gabriela, 189:06'],
+    ['attlas','idea','A câmera intraoral e o scanner ligados ao Attlas','Se eu conseguisse conectar ela ao Attlas, a gente conseguiria gerar o mapeamento dentro do Attlas com laudo.','Gabriela, 133:00'],
+    ['prioridade','idea','O G4 da odontologia, a maior do Brasil','A gente pode criar um G4 da odontologia e ser a maior do Brasil.','João, 197:27'],
+    ['academy','open','O preço do completo (R$ 997?) e o de só um lado (no mínimo R$ 697?)','',''],
+    ['continuidade','open','O nome do programa mensal e o que ele entrega','',''],
+    ['presencial','open','O que exatamente entra na imersão de R$ 12 mil, e a data de fevereiro','',''],
+    ['presencial','open','O nome, o formato e o preço do Evento VR','',''],
+    ['presencial','open','Um presencial só, ou um de técnica e outro de gestão','',''],
+    ['base','open','A base do guia: grátis ou com oferta; e se a comunidade pode ser vendida sozinha (a decisão de 16/10 é não ter mensalidade baixa de aluno)','',''],
+    ['base','open','O acesso dos alunos migrados: por um ano ou para sempre','',''],
+    ['porta','open','O produto de entrada barato: qual é, ou se o Guia de Polimento continua sendo ele','',''],
+    ['venda','open','O checkout: a HyperCash (a taxa a confirmar) ou a Hotmart','',''],
+    ['prioridade','open','O que vem primeiro para a venda: a VR Academy ou o Attlas Odonto','','']
+  ];
+  var fS = 'ok', fT = 'todos';
+  var ft = document.getElementById('f-tema');
+  ft.innerHTML = '<button type="button" class="chip" data-t="todos" aria-pressed="true">Todos os temas</button>' + Object.keys(TEMAS).map(function(k){ return '<button type="button" class="chip" data-t="' + k + '" aria-pressed="false">' + TEMAS[k] + '</button>'; }).join('');
+  function renderD(){
+    var rows = D.filter(function(d){ return d[1] === fS && (fT === 'todos' || d[0] === fT); });
+    var word = {ok:['decisão','decisões'], idea:['ideia','ideias'], open:['ponto em aberto','pontos em aberto']}[fS];
+    document.getElementById('d-count').textContent = rows.length + ' ' + (rows.length === 1 ? word[0] : word[1]) + (fT === 'todos' ? '' : ' em ' + TEMAS[fT].toLowerCase());
+    document.getElementById('d-list').innerHTML = rows.length ? rows.map(function(d, i){
+      return '<li><span class="n">' + String(i+1).padStart(2,'0') + '</span><div><h4>' + esc(d[2]) + '</h4>' + (d[3] ? '<q>' + esc(d[3]) + '</q>' : '') + '</div><span class="st ' + d[1] + '">' + STLABEL[d[1]] + '</span>' + (d[4] ? '<span class="who">' + esc(d[4]) + '</span>' : '<span class="who">' + TEMAS[d[0]] + '</span>') + '</li>';
+    }).join('') : '<li><span class="n"></span><div><h4>Nada com este filtro.</h4></div></li>';
+  }
+  document.querySelectorAll('#f-status .chip').forEach(function(b){
+    b.addEventListener('click', function(){ fS = b.dataset.s; document.querySelectorAll('#f-status .chip').forEach(function(o){ o.setAttribute('aria-pressed', o === b); }); renderD(); });
+  });
+  ft.querySelectorAll('.chip').forEach(function(b){
+    b.addEventListener('click', function(){ fT = b.dataset.t; ft.querySelectorAll('.chip').forEach(function(o){ o.setAttribute('aria-pressed', o === b); }); renderD(); });
+  });
+  renderD();
+
+  /* As contas */
+  var C = [
+    {id:'acad', h:'VR Academy no orgânico', p:'vendas no mês × preço do completo', a:['c-acad-q',30,1,'vendas'], b:['c-acad-p',997,50,'R$']},
+    {id:'imm', h:'Uma turma do VR Hands-On', p:'alunos × preço da imersão', a:['c-imm-q',15,1,'alunos'], b:['c-imm-p',12000,500,'R$']},
+    {id:'evt', h:'Um Evento VR', p:'pessoas × ingresso', a:['c-evt-q',100,10,'pessoas'], b:['c-evt-p',497,50,'R$']},
+    {id:'prog', h:'O programa mensal', p:'clientes × mensalidade', a:['c-prog-q',30,1,'clientes'], b:['c-prog-p',3000,250,'R$']},
+    {id:'attlas', h:'O Attlas Odonto', p:'clínicas × mensalidade média', a:['c-att-q',20,5,'clínicas'], b:['c-att-p',497,50,'R$']}
+  ];
+  var fmt = new Intl.NumberFormat('pt-BR', {style:'currency', currency:'BRL', maximumFractionDigits:0});
+  function numBox(cfg){ return '<span class="num"><button type="button" data-for="' + cfg[0] + '" data-d="-' + cfg[2] + '" aria-label="Menos">−</button><input id="' + cfg[0] + '" type="number" inputmode="numeric" min="0" step="' + cfg[2] + '" value="' + cfg[1] + '" aria-label="' + cfg[3] + '"><button type="button" data-for="' + cfg[0] + '" data-d="' + cfg[2] + '" aria-label="Mais">+</button><label for="' + cfg[0] + '">' + cfg[3] + '</label></span>'; }
+  document.getElementById('crows').innerHTML = C.map(function(c){ return '<div class="crow"><div><h4>' + c.h + '</h4><p>' + c.p + '</p></div><div class="ins">' + numBox(c.a) + numBox(c.b) + '</div></div>'; }).join('');
+  function v(id){ var x = parseFloat(document.getElementById(id).value); return isFinite(x) && x > 0 ? x : 0; }
+  function calc(){
+    var acad = v('c-acad-q') * v('c-acad-p'), imm = v('c-imm-q') * v('c-imm-p'), evt = v('c-evt-q') * v('c-evt-p'), prog = v('c-prog-q') * v('c-prog-p'), att = v('c-att-q') * v('c-att-p');
+    document.getElementById('r-mes').textContent = fmt.format(prog + att);
+    document.getElementById('r-prog').textContent = fmt.format(prog);
+    document.getElementById('r-attlas').textContent = fmt.format(att);
+    document.getElementById('r-ano').textContent = fmt.format((prog + att) * 12);
+    document.getElementById('r-acad').textContent = fmt.format(acad);
+    document.getElementById('r-imm').textContent = fmt.format(imm);
+    document.getElementById('r-evt').textContent = fmt.format(evt);
+  }
+  document.getElementById('crows').addEventListener('click', function(e){
+    var b = e.target.closest('button[data-for]'); if(!b) return;
+    var i = document.getElementById(b.dataset.for); i.value = Math.max(0, (parseFloat(i.value) || 0) + parseFloat(b.dataset.d)); calc();
+  });
+  document.getElementById('crows').addEventListener('input', calc);
+  document.getElementById('c-reset').addEventListener('click', function(){ C.forEach(function(c){ document.getElementById(c.a[0]).value = c.a[1]; document.getElementById(c.b[0]).value = c.b[1]; }); calc(); });
+  calc();
+})();
+</script>
+</body>
+</html>
